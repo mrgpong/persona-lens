@@ -1,0 +1,1272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>PersonaLens — Session Console</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F6F3EC; --bg-elevated:#FFFEFB; --bg-sunken:#EFEAE0;
+  --ink:#17140F; --ink-soft:#4C463C; --muted:#8B8375;
+  --line:rgba(23,20,15,0.14); --line-strong:rgba(23,20,15,0.28);
+  --accent:#BD5B34; --accent-ink:#FFF6F0; --accent-soft:#F3DFCF;
+  --teal:#1E5A53; --teal-ink:#EAF4F1; --teal-soft:#D3E7E2;
+  --gold:#9A6C1E; --gold-ink:#FFF8E8; --gold-soft:#EFDDB3;
+  --danger:#A5382B; --danger-ink:#FCEEEC;
+  --radius-sm:3px; --radius-md:5px;
+  --font-display:'Fraunces',Georgia,'Times New Roman',serif;
+  --font-ui:'Space Grotesk','Helvetica Neue',Arial,sans-serif;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#15130F; --bg-elevated:#1D1A15; --bg-sunken:#100E0B;
+    --ink:#F2EEE4; --ink-soft:#C9C2B2; --muted:#8F8776;
+    --line:rgba(242,238,228,0.14); --line-strong:rgba(242,238,228,0.26);
+    --accent:#E08152; --accent-ink:#241209; --accent-soft:#3B2013;
+    --teal:#5FBFAF; --teal-ink:#0C1E1B; --teal-soft:#193531;
+    --gold:#D8AE55; --gold-ink:#241D0A; --gold-soft:#3A2E0F;
+    --danger:#E2685A; --danger-ink:#2A130F;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#15130F; --bg-elevated:#1D1A15; --bg-sunken:#100E0B;
+  --ink:#F2EEE4; --ink-soft:#C9C2B2; --muted:#8F8776;
+  --line:rgba(242,238,228,0.14); --line-strong:rgba(242,238,228,0.26);
+  --accent:#E08152; --accent-ink:#241209; --accent-soft:#3B2013;
+  --teal:#5FBFAF; --teal-ink:#0C1E1B; --teal-soft:#193531;
+  --gold:#D8AE55; --gold-ink:#241D0A; --gold-soft:#3A2E0F;
+  --danger:#E2685A; --danger-ink:#2A130F;
+}
+html{ scroll-padding-top:env(safe-area-inset-top,0px); }
+*{ box-sizing:border-box; }
+html,body{ height:100%; }
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:var(--font-ui); -webkit-font-smoothing:antialiased;
+  min-height:100%;
+}
+::selection{ background:var(--accent); color:var(--accent-ink); }
+a{ color:inherit; }
+button{ font-family:inherit; }
+.sr-only{ position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+
+/* ---------- shell ---------- */
+.shell{ max-width:1240px; margin:0 auto; padding:0 clamp(18px,3.4vw,44px) 80px; }
+.topbar{
+  position:sticky; top:env(safe-area-inset-top,0px); z-index:40;
+  background:color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--line);
+}
+.topbar-inner{
+  max-width:1240px; margin:0 auto; padding:16px clamp(18px,3.4vw,44px);
+  display:flex; align-items:center; gap:28px;
+}
+.wordmark{ display:flex; align-items:baseline; gap:9px; margin-right:auto; text-decoration:none; }
+.wordmark .glyph{
+  width:26px; height:26px; border-radius:50%;
+  background:conic-gradient(from 220deg, var(--accent), var(--teal), var(--accent));
+  flex:none; position:relative;
+}
+.wordmark .glyph::after{
+  content:""; position:absolute; inset:6px; border-radius:50%; background:var(--bg-elevated);
+}
+.wordmark .name{ font-family:var(--font-display); font-style:italic; font-weight:500; font-size:21px; letter-spacing:-0.01em; }
+.wordmark .name b{ font-style:normal; font-weight:600; }
+
+nav.tabs{ display:flex; gap:4px; }
+nav.tabs button{
+  border:none; background:none; color:var(--muted); font-size:13.5px; letter-spacing:.02em;
+  padding:8px 13px; cursor:pointer; border-radius:999px; transition:color .15s ease, background .15s ease;
+}
+nav.tabs button:hover{ color:var(--ink); }
+nav.tabs button.active{ color:var(--ink); background:var(--bg-sunken); font-weight:500; }
+nav.tabs button:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+
+.status-pill{
+  display:flex; align-items:center; gap:7px; font-size:12px; letter-spacing:.04em; text-transform:uppercase;
+  color:var(--muted); border:1px solid var(--line); padding:6px 11px 6px 9px; border-radius:999px; cursor:pointer;
+  background:var(--bg-elevated);
+}
+.status-pill .dot{ width:7px; height:7px; border-radius:50%; background:var(--teal); flex:none; }
+.status-pill:hover{ border-color:var(--line-strong); }
+
+/* ---------- views ---------- */
+.view{ display:none; }
+.view.active{ display:block; animation:rise .5s cubic-bezier(.2,.8,.2,1); }
+@keyframes rise{ from{ opacity:0; transform:translateY(10px); } to{ opacity:1; transform:none; } }
+@media (prefers-reduced-motion: reduce){ .view.active{ animation:none; } }
+
+.hero{ padding:clamp(34px,6vw,64px) 0 8px; display:grid; grid-template-columns: 1.15fr .85fr; gap:6px; align-items:end; }
+.hero h1{
+  font-family:var(--font-display); font-weight:500; font-size:clamp(34px,4.6vw,56px); line-height:1.02;
+  letter-spacing:-0.015em; margin:0 0 14px;
+}
+.hero h1 em{ font-style:italic; color:var(--accent); }
+.hero p{ margin:0; color:var(--ink-soft); font-size:15.5px; max-width:46ch; line-height:1.55; }
+.hero .meta{ text-align:right; font-size:12.5px; color:var(--muted); line-height:1.7; }
+.hero .meta strong{ color:var(--ink-soft); font-weight:500; }
+
+hr.rule{ border:none; border-top:1px solid var(--line); margin:30px 0; }
+
+/* ---------- session stage ---------- */
+.stage-grid{ display:grid; grid-template-columns: 1.2fr .95fr; gap:34px; align-items:start; }
+@media (max-width: 900px){ .stage-grid{ grid-template-columns:1fr; } }
+
+.mode-switch{ display:inline-flex; border:1px solid var(--line); border-radius:999px; padding:3px; gap:2px; background:var(--bg-elevated); }
+.mode-switch button{
+  border:none; background:none; padding:8px 16px; border-radius:999px; font-size:13px; color:var(--muted);
+  cursor:pointer; display:flex; align-items:center; gap:7px; transition:background .18s ease,color .18s ease;
+}
+.mode-switch button svg{ width:14px; height:14px; }
+.mode-switch button.active{ background:var(--ink); color:var(--bg); }
+:root[data-theme="dark"] .mode-switch button.active, @media (prefers-color-scheme:dark){ .mode-switch button.active{ background:var(--ink); color:var(--bg); } }
+.mode-switch button:disabled{ opacity:.4; cursor:not-allowed; }
+
+.stage{
+  border:1px solid var(--line); border-radius:var(--radius-md); background:var(--bg-elevated);
+  overflow:hidden; position:relative; margin-top:16px;
+}
+.stage-visual{
+  position:relative; aspect-ratio:4/3; background:var(--bg-sunken);
+  display:flex; align-items:center; justify-content:center; overflow:hidden;
+}
+.stage-visual video{ width:100%; height:100%; object-fit:cover; display:block; transform:scaleX(-1); }
+.stage-visual canvas.wave{ width:100%; height:100%; display:block; }
+.stage-idle{ text-align:center; color:var(--muted); padding:20px; max-width:280px; }
+.stage-idle .ring{
+  width:74px; height:74px; margin:0 auto 18px; border-radius:50%; border:1.5px dashed var(--line-strong);
+  display:flex; align-items:center; justify-content:center;
+}
+.stage-idle .ring svg{ width:28px; height:28px; opacity:.55; }
+.stage-idle p{ margin:0; font-size:13.5px; line-height:1.5; }
+
+.face-box{
+  position:absolute; border:1.5px solid var(--accent); border-radius:2px;
+  animation:appear .35s ease both; pointer-events:none;
+}
+@keyframes appear{ from{ opacity:0; transform:scale(.94); } to{ opacity:1; transform:none; } }
+.face-box .tag{
+  position:absolute; left:-1.5px; top:calc(100% + 6px); background:var(--accent); color:var(--accent-ink);
+  font-size:11.5px; padding:4px 8px; border-radius:2px; white-space:nowrap; font-weight:500;
+  letter-spacing:.01em;
+}
+.face-box.unknown{ border-color:var(--muted); border-style:dashed; }
+.face-box.unknown .tag{ background:var(--ink); color:var(--bg); }
+
+.demo-flag{
+  position:absolute; top:10px; right:10px; font-size:10px; letter-spacing:.09em; text-transform:uppercase;
+  background:color-mix(in srgb, var(--bg-sunken) 82%, transparent); color:var(--muted);
+  padding:4px 8px; border-radius:2px; border:1px solid var(--line); backdrop-filter:blur(4px);
+}
+
+.stage-footer{ padding:18px 20px 20px; display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
+.rec-btn{
+  width:56px; height:56px; border-radius:50%; border:1px solid var(--line-strong); background:var(--bg-elevated);
+  cursor:pointer; flex:none; position:relative; display:flex; align-items:center; justify-content:center;
+  transition:transform .12s ease, box-shadow .2s ease;
+}
+.rec-btn:hover{ transform:scale(1.04); }
+.rec-btn:active{ transform:scale(.96); }
+.rec-btn:focus-visible{ outline:2px solid var(--accent); outline-offset:3px; }
+.rec-btn .core{ width:20px; height:20px; border-radius:50%; background:var(--accent); transition:all .2s ease; }
+.rec-btn.recording .core{ border-radius:4px; width:16px; height:16px; }
+.rec-btn.recording{ box-shadow:0 0 0 0 rgba(189,91,52,.5); animation:pulse-ring 1.8s ease-out infinite; }
+@keyframes pulse-ring{ 0%{ box-shadow:0 0 0 0 rgba(189,91,52,.42);} 70%{ box-shadow:0 0 0 14px rgba(189,91,52,0);} 100%{ box-shadow:0 0 0 0 rgba(189,91,52,0);} }
+@media (prefers-reduced-motion: reduce){ .rec-btn.recording{ animation:none; } }
+
+.stage-status{ flex:1; min-width:160px; }
+.stage-status .line1{ font-size:14.5px; font-weight:500; }
+.stage-status .line2{ font-size:12.5px; color:var(--muted); margin-top:2px; }
+.timer{ font-variant-numeric:tabular-nums; font-size:13px; color:var(--muted); letter-spacing:.02em; }
+
+.tag-chip{ display:inline-flex; align-items:center; gap:6px; font-size:11.5px; padding:3px 9px; border-radius:999px; font-weight:500; }
+.tag-chip.on-vision{ background:var(--accent-soft); color:var(--accent); }
+.tag-chip.on-audio{ background:var(--teal-soft); color:var(--teal); }
+
+.quick-tag{ margin-top:14px; padding:0 20px 18px; }
+.quick-tag label{ font-size:12px; color:var(--muted); display:block; margin-bottom:6px; }
+.quick-tag select{
+  width:100%; border:1px solid var(--line); background:var(--bg); color:var(--ink); border-radius:var(--radius-sm);
+  padding:9px 10px; font-size:13.5px; font-family:inherit;
+}
+
+/* transcript panel */
+.transcript-panel{
+  border:1px solid var(--line); border-radius:var(--radius-md); background:var(--bg-elevated);
+  display:flex; flex-direction:column; height:100%; min-height:420px; margin-top:16px;
+}
+.transcript-head{ padding:16px 18px 12px; border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:space-between; }
+.transcript-head h2{ font-family:var(--font-display); font-weight:500; font-size:16.5px; margin:0; }
+.transcript-head .diar{ display:flex; align-items:center; gap:9px; font-size:11.5px; color:var(--muted); }
+.legend-dot{ width:7px; height:7px; border-radius:50%; display:inline-block; margin-right:4px; }
+.transcript-body{ flex:1; overflow-y:auto; padding:16px 18px; display:flex; flex-direction:column; gap:12px; max-height:420px; }
+.transcript-body::-webkit-scrollbar{ width:6px; }
+.transcript-body::-webkit-scrollbar-thumb{ background:var(--line-strong); border-radius:3px; }
+.t-line{ animation:fadein .4s ease both; max-width:92%; }
+@keyframes fadein{ from{ opacity:0; transform:translateY(4px);} to{ opacity:1; transform:none;} }
+.t-line .who{ font-size:11px; text-transform:uppercase; letter-spacing:.06em; font-weight:600; margin-bottom:3px; }
+.t-line.host{ align-self:flex-start; }
+.t-line.host .who{ color:var(--teal); }
+.t-line.other{ align-self:flex-end; text-align:right; }
+.t-line.other .who{ color:var(--accent); }
+.t-line p{ margin:0; font-size:14px; line-height:1.5; color:var(--ink-soft); }
+.t-empty{ margin:auto; text-align:center; color:var(--muted); font-size:13px; max-width:220px; }
+
+/* diarization bar */
+.diar-bar{ height:5px; border-radius:999px; overflow:hidden; display:flex; background:var(--bg-sunken); margin-top:8px; }
+.diar-bar span{ height:100%; }
+.diar-bar .host{ background:var(--teal); }
+.diar-bar .other{ background:var(--accent); }
+
+/* summary card */
+.summary-wrap{ margin-top:26px; }
+.summary-card{
+  border:1px solid var(--line-strong); border-radius:var(--radius-md); background:var(--bg-elevated);
+  padding:26px 28px; animation:rise .5s cubic-bezier(.2,.8,.2,1);
+}
+.summary-card .kicker{ font-size:11.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); margin-bottom:8px; }
+.summary-card h3{ font-family:var(--font-display); font-weight:500; font-size:23px; margin:0 0 12px; letter-spacing:-0.01em; }
+.summary-card p.body{ font-size:14.5px; line-height:1.65; color:var(--ink-soft); margin:0 0 18px; max-width:70ch; }
+.summary-meta{ display:flex; gap:28px; flex-wrap:wrap; margin-bottom:18px; }
+.summary-meta div{ min-width:120px; }
+.summary-meta .k{ font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; margin-bottom:4px; }
+.summary-meta .v{ font-size:14.5px; font-weight:500; }
+.summary-actions{ display:flex; gap:10px; flex-wrap:wrap; }
+
+/* buttons */
+.btn{
+  border-radius:999px; padding:10px 20px; font-size:13.5px; font-weight:500; cursor:pointer;
+  border:1px solid var(--line-strong); background:transparent; color:var(--ink); transition:all .15s ease;
+  display:inline-flex; align-items:center; gap:8px;
+}
+.btn:hover{ border-color:var(--ink); }
+.btn:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+.btn.primary{ background:var(--ink); color:var(--bg); border-color:var(--ink); }
+.btn.primary:hover{ opacity:.88; }
+.btn.accent{ background:var(--accent); color:var(--accent-ink); border-color:var(--accent); }
+.btn.accent:hover{ opacity:.9; }
+.btn.ghost{ border-color:transparent; color:var(--muted); padding-left:10px; padding-right:10px; }
+.btn.ghost:hover{ color:var(--ink); }
+.btn:disabled{ opacity:.4; cursor:not-allowed; }
+.btn svg{ width:15px; height:15px; }
+
+/* ---------- people view ---------- */
+.people-list{ margin-top:10px; }
+.person-row{
+  display:grid; grid-template-columns: 42px 1.1fr 1.6fr 1.6fr 110px; gap:20px; align-items:center;
+  padding:20px 4px; border-bottom:1px solid var(--line); cursor:pointer; transition:background .15s ease;
+}
+.person-row:hover{ background:var(--bg-sunken); }
+.person-row:first-of-type{ border-top:1px solid var(--line); }
+@media (max-width:760px){ .person-row{ grid-template-columns:38px 1fr; row-gap:8px; } .person-row .col-rel,.person-row .col-first,.person-row .col-seen{ grid-column:2; } }
+.avatar{
+  width:42px; height:42px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+  font-family:var(--font-display); font-weight:500; font-size:15px; background:var(--accent-soft); color:var(--accent);
+  flex:none;
+}
+.p-name{ font-size:15.5px; font-weight:500; }
+.p-name small{ display:block; font-weight:400; color:var(--muted); font-size:12px; margin-top:2px; }
+.p-sub{ font-size:13px; color:var(--ink-soft); line-height:1.45; }
+.p-sub .k{ display:block; font-size:10.5px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); margin-bottom:3px; }
+.p-seen{ font-size:12.5px; color:var(--muted); text-align:right; }
+@media (max-width:760px){ .p-seen{ text-align:left; } }
+
+.detail-panel{
+  margin-top:22px; border:1px solid var(--line); border-radius:var(--radius-md); padding:24px 26px; background:var(--bg-elevated); display:none;
+}
+.detail-panel.open{ display:block; animation:rise .4s ease both; }
+.detail-panel h3{ font-family:var(--font-display); font-weight:500; font-size:21px; margin:0 0 4px; }
+.detail-panel .rel{ font-size:12.5px; color:var(--muted); margin-bottom:18px; }
+.detail-grid{ display:grid; grid-template-columns:1fr 1fr; gap:24px; }
+@media (max-width:640px){ .detail-grid{ grid-template-columns:1fr; } }
+.detail-grid .k{ font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); margin-bottom:6px; }
+.detail-grid p{ font-size:14px; line-height:1.6; color:var(--ink-soft); margin:0; }
+
+/* history */
+.hist-row{ border-bottom:1px solid var(--line); padding:18px 4px; display:grid; grid-template-columns:100px 1fr 130px; gap:18px; align-items:center; }
+.hist-row:first-of-type{ border-top:1px solid var(--line); }
+@media (max-width:700px){ .hist-row{ grid-template-columns:1fr; gap:8px; } }
+.hist-date{ font-size:12.5px; color:var(--muted); }
+.hist-main .who{ font-size:14.5px; font-weight:500; }
+.hist-main .snippet{ font-size:13px; color:var(--ink-soft); margin-top:4px; line-height:1.5; }
+.hist-split{ display:flex; flex-direction:column; align-items:flex-end; gap:6px; }
+@media (max-width:700px){ .hist-split{ align-items:flex-start; } }
+.hist-split .pct{ font-size:11px; color:var(--muted); }
+.hist-split .diar-bar{ width:100px; margin:0; }
+
+.empty-state{ padding:60px 10px; text-align:center; color:var(--muted); }
+.empty-state svg{ width:34px; height:34px; opacity:.45; margin-bottom:14px; }
+.empty-state p{ font-size:14px; max-width:280px; margin:0 auto; }
+
+/* ---------- footer / integration notes ---------- */
+footer{ margin-top:70px; border-top:1px solid var(--line); padding-top:26px; }
+details.notes{ font-size:13px; color:var(--ink-soft); }
+details.notes summary{ cursor:pointer; font-size:12.5px; letter-spacing:.03em; color:var(--muted); list-style:none; display:flex; align-items:center; gap:6px; }
+details.notes summary::-webkit-details-marker{ display:none; }
+details.notes summary svg{ width:12px; height:12px; transition:transform .2s ease; }
+details.notes[open] summary svg{ transform:rotate(90deg); }
+.notes-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:18px; margin-top:16px; }
+.notes-grid .item{ border-left:2px solid var(--line-strong); padding-left:12px; }
+.notes-grid .item .label{ font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); margin-bottom:5px; }
+.notes-grid .item .label.real{ color:var(--teal); }
+.notes-grid .item .label.sim{ color:var(--accent); }
+.notes-grid .item p{ margin:0; font-size:12.5px; line-height:1.55; color:var(--ink-soft); }
+.notes-grid .item code{ font-size:11.5px; background:var(--bg-sunken); padding:1px 5px; border-radius:3px; }
+footer .fine{ margin-top:22px; font-size:11.5px; color:var(--muted); }
+
+/* ---------- modals ---------- */
+.overlay{
+  position:fixed; inset:0; background:color-mix(in srgb, var(--ink) 46%, transparent); backdrop-filter:blur(3px);
+  display:none; align-items:center; justify-content:center; z-index:100; padding:20px;
+  padding-top:calc(20px + env(safe-area-inset-top,0px)); padding-bottom:calc(20px + env(safe-area-inset-bottom,0px));
+}
+.overlay.open{ display:flex; animation:fadein .25s ease both; }
+.modal{
+  width:100%; max-width:460px; background:var(--bg-elevated); border-radius:var(--radius-md); border:1px solid var(--line-strong);
+  padding:30px 30px 26px; max-height:88vh; overflow-y:auto; animation:pop .3s cubic-bezier(.2,.8,.2,1) both;
+}
+@keyframes pop{ from{ opacity:0; transform:translateY(10px) scale(.98);} to{ opacity:1; transform:none;} }
+.modal .m-kicker{ font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--gold); margin-bottom:8px; display:flex; align-items:center; gap:7px; }
+.modal h2{ font-family:var(--font-display); font-weight:500; font-size:24px; margin:0 0 10px; letter-spacing:-.01em; }
+.modal p.desc{ font-size:13.5px; color:var(--ink-soft); line-height:1.6; margin:0 0 20px; }
+.field{ margin-bottom:16px; }
+.field label{ display:block; font-size:12px; color:var(--muted); margin-bottom:6px; }
+.field input[type="text"], .field select, .field textarea{
+  width:100%; border:1px solid var(--line-strong); background:var(--bg); color:var(--ink); border-radius:var(--radius-sm);
+  padding:10px 11px; font-size:14px; font-family:inherit;
+}
+.field textarea{ resize:vertical; min-height:60px; }
+.field input:focus, .field select:focus, .field textarea:focus{ outline:2px solid var(--accent); outline-offset:1px; }
+.field .err{ color:var(--danger); font-size:12px; margin-top:5px; display:none; }
+.field.invalid input, .field.invalid select{ border-color:var(--danger); }
+.field.invalid .err{ display:block; }
+
+.enroll-visual{
+  height:110px; border:1px solid var(--line); border-radius:var(--radius-sm); background:var(--bg-sunken);
+  display:flex; align-items:center; justify-content:center; margin-bottom:18px; overflow:hidden;
+}
+.enroll-visual canvas{ width:100%; height:100%; }
+.enroll-controls{ display:flex; align-items:center; gap:14px; margin-bottom:6px; }
+.enroll-timer{ font-size:13px; color:var(--muted); font-variant-numeric:tabular-nums; }
+.enroll-status{ font-size:12.5px; color:var(--muted); margin-top:14px; min-height:16px; }
+.enroll-status.ok{ color:var(--teal); }
+.modal-actions{ display:flex; justify-content:flex-end; gap:10px; margin-top:22px; }
+.modal .skip-link{ display:block; text-align:center; font-size:12px; color:var(--muted); margin-top:16px; text-decoration:underline; text-underline-offset:2px; background:none; border:none; cursor:pointer; width:100%; }
+.modal .skip-link:hover{ color:var(--ink); }
+
+.toast-stack{ position:fixed; bottom:calc(22px + env(safe-area-inset-bottom,0px)); left:50%; transform:translateX(-50%); z-index:200; display:flex; flex-direction:column; gap:8px; align-items:center; width:100%; padding:0 16px; }
+.toast{
+  background:var(--ink); color:var(--bg); font-size:13px; padding:10px 18px; border-radius:999px;
+  animation:toastin .35s cubic-bezier(.2,.8,.2,1) both; box-shadow:0 6px 20px rgba(0,0,0,.18);
+}
+@keyframes toastin{ from{ opacity:0; transform:translateY(8px);} to{ opacity:1; transform:none;} }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <a class="wordmark" href="#" data-nav="dashboard" aria-label="PersonaLens, go to dashboard">
+      <span class="glyph" aria-hidden="true"></span>
+      <span class="name">Persona<b>Lens</b></span>
+    </a>
+    <nav class="tabs" aria-label="Primary">
+      <button data-nav="dashboard" class="active">Dashboard</button>
+      <button data-nav="people">People</button>
+      <button data-nav="history">History</button>
+    </nav>
+    <button class="status-pill" id="enrollStatusBtn" type="button">
+      <span class="dot" id="enrollDot"></span>
+      <span id="enrollStatusText">Checking voice profile…</span>
+    </button>
+  </div>
+</div>
+
+<main class="shell">
+
+  <!-- ============ DASHBOARD ============ -->
+  <section class="view active" id="view-dashboard" aria-labelledby="dash-h1">
+    <div class="hero">
+      <div>
+        <h1 id="dash-h1">Every conversation, <em>remembered</em> for you.</h1>
+        <p>Start a session the moment someone sits down, or capture a voice-only chat with no camera at all. PersonaLens listens, transcribes and recalls — quietly, in the background.</p>
+      </div>
+      <div class="meta">
+        <div>Patient record <strong>Kamala R.</strong></div>
+        <div id="peopleCountMeta">3 known people · 0 sessions logged</div>
+      </div>
+    </div>
+
+    <hr class="rule">
+
+    <div class="stage-grid">
+      <div>
+        <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:14px;">
+          <div class="mode-switch" role="tablist" aria-label="Session mode">
+            <button type="button" id="modeVisionBtn" class="active" role="tab" aria-selected="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+              Vision + voice
+            </button>
+            <button type="button" id="modeAudioBtn" role="tab" aria-selected="false">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2M12 19v4"/></svg>
+              Voice only
+            </button>
+          </div>
+          <span class="tag-chip on-vision" id="modeChip">Camera + microphone</span>
+        </div>
+
+        <div class="stage">
+          <div class="stage-visual" id="stageVisual">
+            <div class="stage-idle" id="stageIdle">
+              <div class="ring"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg></div>
+              <p>Press record to start watching for a face — or switch to voice-only if there's no camera around.</p>
+            </div>
+            <video id="camFeed" autoplay playsinline muted style="display:none"></video>
+            <canvas class="wave" id="waveCanvas" style="display:none"></canvas>
+            <span class="demo-flag" id="demoFlag" style="display:none">Simulated recognition</span>
+          </div>
+          <div class="stage-footer">
+            <button class="rec-btn" id="recBtn" type="button" aria-label="Start recording">
+              <span class="core"></span>
+            </button>
+            <div class="stage-status">
+              <div class="line1" id="statusLine1">Ready when you are</div>
+              <div class="line2" id="statusLine2">No one is being recorded right now.</div>
+            </div>
+            <div class="timer" id="sessionTimer" style="display:none">00:00</div>
+          </div>
+          <div class="quick-tag" id="quickTagWrap" style="display:none">
+            <label for="quickTagSelect">Already know who this is? Tag them now (optional)</label>
+            <select id="quickTagSelect">
+              <option value="">Ask me after the call ends</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="transcript-panel">
+        <div class="transcript-head">
+          <h2>Live transcript</h2>
+          <div class="diar" id="diarLegend" style="display:none">
+            <span><span class="legend-dot" style="background:var(--teal)"></span>Host</span>
+            <span><span class="legend-dot" style="background:var(--accent)"></span>Other</span>
+          </div>
+        </div>
+        <div class="transcript-body" id="transcriptBody">
+          <div class="t-empty">Transcript lines will stream in here once a session starts. Whisper runs locally — nothing leaves the device.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="summary-wrap" id="summaryWrap" style="display:none"></div>
+
+    <footer>
+      <details class="notes">
+        <summary><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg> What's real vs. simulated in this build</summary>
+        <div class="notes-grid">
+          <div class="item">
+            <div class="label real">Live in this demo</div>
+            <p>Camera preview, microphone capture and the reactive waveform use your actual device hardware via <code>getUserMedia</code> and <code>AnalyserNode</code>. The voice enrollment clip is really recorded.</p>
+          </div>
+          <div class="item">
+            <div class="label sim">Simulated here</div>
+            <p>Face matching, live transcription and AI summaries are scripted for this preview. In production these map to <code>POST /recognize</code>, <code>POST /process-interaction</code> and the Ollama <code>qwen3:8b</code> call.</p>
+          </div>
+          <div class="item">
+            <div class="label sim">Diarization</div>
+            <p>Host vs. other speaker segments are illustrative. The real path enrolls a <code>pyannote.audio</code> voice print once, then diarizes every session against that fixed profile.</p>
+          </div>
+          <div class="item">
+            <div class="label real">Persisted locally</div>
+            <p>People, sessions and your enrollment status save to this browser only, so the demo behaves consistently across visits without a backend.</p>
+          </div>
+        </div>
+      </details>
+      <p class="fine">PersonaLens · assistive memory companion · built from the project's README, MASTER_DOC and CLAUDE.md context</p>
+    </footer>
+  </section>
+
+  <!-- ============ PEOPLE ============ -->
+  <section class="view" id="view-people" aria-labelledby="people-h1">
+    <div class="hero" style="grid-template-columns:1fr;">
+      <div>
+        <h1 id="people-h1">People <em>Kamala</em> knows.</h1>
+        <p>First-ever meeting is kept permanently. The most recent interaction always replaces the last one.</p>
+      </div>
+    </div>
+    <hr class="rule">
+    <div class="people-list" id="peopleList"></div>
+    <div class="detail-panel" id="detailPanel"></div>
+  </section>
+
+  <!-- ============ HISTORY ============ -->
+  <section class="view" id="view-history" aria-labelledby="hist-h1">
+    <div class="hero" style="grid-template-columns:1fr;">
+      <div>
+        <h1 id="hist-h1">Session <em>history</em>.</h1>
+        <p>Every recorded conversation, vision-triggered or voice-only, with its diarization split.</p>
+      </div>
+    </div>
+    <hr class="rule">
+    <div id="historyList"></div>
+  </section>
+
+</main>
+
+<!-- Voice enrollment modal -->
+<div class="overlay" id="enrollOverlay" role="dialog" aria-modal="true" aria-labelledby="enrollTitle">
+  <div class="modal">
+    <div class="m-kicker"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2M12 19v4"/></svg>One-time setup</div>
+    <h2 id="enrollTitle">Record the host's voice</h2>
+    <p class="desc">Read a sentence or two out loud. This short sample becomes Kamala's fixed voice print — every future session uses it to tell her voice apart from whoever she's speaking with.</p>
+    <div class="enroll-visual"><canvas id="enrollCanvas"></canvas></div>
+    <div class="enroll-controls">
+      <button class="btn accent" id="enrollRecBtn" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="6"/></svg>
+        Record sample
+      </button>
+      <span class="enroll-timer" id="enrollTimer">Aim for 5–8 seconds</span>
+    </div>
+    <div class="enroll-status" id="enrollStatus"></div>
+    <div class="modal-actions">
+      <button class="btn primary" id="enrollSaveBtn" type="button" disabled>Save voice profile</button>
+    </div>
+    <button class="skip-link" id="enrollSkipBtn" type="button">Skip for now — I'll enroll later</button>
+  </div>
+</div>
+
+<!-- Post-hoc naming modal -->
+<div class="overlay" id="nameOverlay" role="dialog" aria-modal="true" aria-labelledby="nameTitle">
+  <div class="modal">
+    <div class="m-kicker" style="color:var(--accent)"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>Unrecognized speaker</div>
+    <h2 id="nameTitle">Who was that?</h2>
+    <p class="desc" id="nameDesc">The conversation's saved. Add a name now so PersonaLens recognizes them next time.</p>
+    <div class="field" id="nameField">
+      <label for="nameInput">Name</label>
+      <input type="text" id="nameInput" placeholder="e.g. Meera Krishnan" autocomplete="off">
+      <div class="err">Enter a name before saving.</div>
+    </div>
+    <div class="field">
+      <label for="relInput">Relationship</label>
+      <select id="relInput">
+        <option value="">Select one</option>
+        <option>Daughter</option><option>Son</option><option>Spouse</option>
+        <option>Grandchild</option><option>Sibling</option><option>Friend</option>
+        <option>Neighbor</option><option>Caregiver</option><option>Other</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn ghost" id="nameLaterBtn" type="button">Leave unnamed</button>
+      <button class="btn primary" id="nameSaveBtn" type="button">Save person</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-stack" id="toastStack" aria-live="polite"></div>
+
+<script>
+(function(){
+"use strict";
+
+/* ---------------- state & persistence ---------------- */
+var STORE_KEY = "personalens_demo_state_v1";
+
+var seedPeople = [
+  { id:"p1", name:"Meera Krishnan", relation:"Daughter",
+    firstSummary:"Meera visited on a Tuesday afternoon and reminded me about her promotion at the hospital — we talked about her new office and she brought jasmine flowers.",
+    lastSummary:"Meera stopped by after work, asked how my knee was doing, and mentioned she's bringing the grandchildren this weekend.",
+    lastSeen:"Sep 21, 2026", sessions:6, vision:true },
+  { id:"p2", name:"Arjun Krishnan", relation:"Son",
+    firstSummary:"Arjun called from Bengaluru to check in after the move, described his new apartment, and promised to visit next month.",
+    lastSummary:"Arjun mentioned work has been busy but he booked train tickets for Diwali and asked about the medication schedule.",
+    lastSeen:"Sep 14, 2026", sessions:4, vision:true },
+  { id:"p3", name:"Priya Nair", relation:"Neighbor",
+    firstSummary:"Priya introduced herself after moving in next door, brought over some homemade payasam, and offered to help with groceries.",
+    lastSummary:"Priya dropped by to return a dish and chatted about the new flower beds along the compound wall.",
+    lastSeen:"Sep 9, 2026", sessions:3, vision:true }
+];
+
+function loadState(){
+  try{
+    var raw = localStorage.getItem(STORE_KEY);
+    if(raw){
+      var parsed = JSON.parse(raw);
+      if(parsed && Array.isArray(parsed.people)) return parsed;
+    }
+  }catch(e){}
+  return { enrolled:false, enrolledAt:null, people: seedPeople, sessions: [] };
+}
+function saveState(){
+  try{ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }catch(e){}
+}
+var state = loadState();
+
+/* ---------------- dom refs ---------------- */
+var $ = function(id){ return document.getElementById(id); };
+var navButtons = document.querySelectorAll("[data-nav]");
+var views = { dashboard:$("view-dashboard"), people:$("view-people"), history:$("view-history") };
+
+var modeVisionBtn = $("modeVisionBtn"), modeAudioBtn = $("modeAudioBtn"), modeChip = $("modeChip");
+var stageVisual = $("stageVisual"), stageIdle = $("stageIdle"), camFeed = $("camFeed"), waveCanvas = $("waveCanvas");
+var demoFlag = $("demoFlag"), recBtn = $("recBtn"), statusLine1 = $("statusLine1"), statusLine2 = $("statusLine2");
+var sessionTimer = $("sessionTimer"), quickTagWrap = $("quickTagWrap"), quickTagSelect = $("quickTagSelect");
+var transcriptBody = $("transcriptBody"), diarLegend = $("diarLegend"), summaryWrap = $("summaryWrap");
+var peopleCountMeta = $("peopleCountMeta"), peopleList = $("peopleList"), detailPanel = $("detailPanel"), historyList = $("historyList");
+var enrollStatusBtn = $("enrollStatusBtn"), enrollDot = $("enrollDot"), enrollStatusText = $("enrollStatusText");
+var enrollOverlay = $("enrollOverlay"), enrollRecBtn = $("enrollRecBtn"), enrollTimer = $("enrollTimer");
+var enrollStatus = $("enrollStatus"), enrollSaveBtn = $("enrollSaveBtn"), enrollSkipBtn = $("enrollSkipBtn"), enrollCanvas = $("enrollCanvas");
+var nameOverlay = $("nameOverlay"), nameInput = $("nameInput"), relInput = $("relInput"), nameField = $("nameField");
+var nameSaveBtn = $("nameSaveBtn"), nameLaterBtn = $("nameLaterBtn"), nameDesc = $("nameDesc");
+var toastStack = $("toastStack");
+
+function toast(msg){
+  var el = document.createElement("div");
+  el.className = "toast"; el.textContent = msg;
+  toastStack.appendChild(el);
+  setTimeout(function(){ el.style.transition="opacity .3s ease"; el.style.opacity="0"; setTimeout(function(){ el.remove(); }, 300); }, 2600);
+}
+
+/* ---------------- navigation ---------------- */
+function setView(name){
+  Object.keys(views).forEach(function(k){ views[k].classList.toggle("active", k===name); });
+  navButtons.forEach(function(b){
+    if(b.tagName==="BUTTON" || b.classList.contains("wordmark")){
+      b.classList.toggle("active", b.getAttribute("data-nav")===name);
+    }
+  });
+  if(name==="people") renderPeople();
+  if(name==="history") renderHistory();
+  window.scrollTo({top:0, behavior:"smooth"});
+}
+navButtons.forEach(function(b){ b.addEventListener("click", function(e){ e.preventDefault(); setView(b.getAttribute("data-nav")); }); });
+
+/* ---------------- media state ---------------- */
+var mode = "vision"; // vision | audio
+var mediaStream = null;
+var audioCtx = null, analyser = null, sourceNode = null, waveRAF = null;
+var recording = false;
+var sessionStart = null, timerInterval = null;
+var recognizedPerson = null; // person object once matched
+var recognitionTimer = null;
+var transcriptTimer = null;
+var transcriptCursor = 0;
+var transcriptLines = []; // {speaker, text}
+var currentTranscriptPool = null;
+var pendingUnknownVision = false;
+
+function fmtTime(sec){
+  var m = Math.floor(sec/60), s = sec%60;
+  return (m<10?"0":"")+m+":"+(s<10?"0":"")+s;
+}
+
+/* ---------------- mode switching ---------------- */
+function setMode(next){
+  if(recording) return;
+  mode = next;
+  modeVisionBtn.classList.toggle("active", mode==="vision");
+  modeVisionBtn.setAttribute("aria-selected", mode==="vision");
+  modeAudioBtn.classList.toggle("active", mode==="audio");
+  modeAudioBtn.setAttribute("aria-selected", mode==="audio");
+  if(mode==="vision"){
+    modeChip.textContent = "Camera + microphone";
+    modeChip.className = "tag-chip on-vision";
+    stageIdle.querySelector("p").textContent = "Press record to start watching for a face — or switch to voice-only if there's no camera around.";
+  } else {
+    modeChip.textContent = "Microphone only";
+    modeChip.className = "tag-chip on-audio";
+    stageIdle.querySelector("p").textContent = "No camera needed. PersonaLens will just listen — you'll be asked who it was once the call ends.";
+  }
+  populateQuickTag();
+}
+modeVisionBtn.addEventListener("click", function(){ setMode("vision"); });
+modeAudioBtn.addEventListener("click", function(){ setMode("audio"); });
+
+function populateQuickTag(){
+  quickTagSelect.innerHTML = '<option value="">Ask me after the call ends</option>';
+  state.people.forEach(function(p){
+    var o = document.createElement("option");
+    o.value = p.id; o.textContent = p.name + " — " + p.relation;
+    quickTagSelect.appendChild(o);
+  });
+}
+
+/* ---------------- waveform ---------------- */
+function drawWave(){
+  var ctx = waveCanvas.getContext("2d");
+  var dpr = window.devicePixelRatio || 1;
+  function resize(){
+    var rect = waveCanvas.getBoundingClientRect();
+    waveCanvas.width = rect.width*dpr; waveCanvas.height = rect.height*dpr;
+  }
+  resize();
+  var bufferLength = analyser.frequencyBinCount;
+  var dataArray = new Uint8Array(bufferLength);
+  function loop(){
+    waveRAF = requestAnimationFrame(loop);
+    analyser.getByteFrequencyData(dataArray);
+    var w = waveCanvas.width, h = waveCanvas.height;
+    ctx.clearRect(0,0,w,h);
+    var barCount = 48;
+    var step = Math.floor(bufferLength/barCount);
+    var barW = w/barCount*0.62;
+    var gap = w/barCount*0.38;
+    var isDark = getComputedStyle(document.body).getPropertyValue("--bg").trim().indexOf("#1")===0 || getComputedStyle(document.body).getPropertyValue("--bg").trim().indexOf("#15")===0;
+    var accentColor = getComputedStyle(document.documentElement).getPropertyValue(mode==="vision" ? "--accent" : "--teal").trim() || "#BD5B34";
+    ctx.fillStyle = accentColor;
+    for(var i=0;i<barCount;i++){
+      var v = dataArray[i*step] / 255;
+      var barH = Math.max(h*0.03, v*h*0.85);
+      var x = i*(barW+gap) + gap/2;
+      var y = (h-barH)/2;
+      ctx.globalAlpha = 0.35 + v*0.65;
+      roundRect(ctx, x, y, barW, barH, Math.min(4*dpr, barW/2));
+    }
+    ctx.globalAlpha = 1;
+  }
+  loop();
+}
+function roundRect(ctx,x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.arcTo(x+w,y,x+w,y+h,r);
+  ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r);
+  ctx.arcTo(x,y,x+w,y,r);
+  ctx.closePath();
+  ctx.fill();
+}
+
+/* ---------------- session lifecycle ---------------- */
+function startSession(){
+  transcriptLines = []; transcriptCursor = 0; recognizedPerson = null; pendingUnknownVision = false;
+  transcriptBody.innerHTML = "";
+  summaryWrap.style.display = "none"; summaryWrap.innerHTML = "";
+  quickTagWrap.style.display = "block";
+  diarLegend.style.display = "flex";
+
+  var constraints = mode==="vision" ? {video:{facingMode:"user"}, audio:true} : {audio:true};
+
+  navigator.mediaDevices.getUserMedia(constraints).then(function(stream){
+    mediaStream = stream;
+    recording = true;
+    recBtn.classList.add("recording");
+    recBtn.setAttribute("aria-label","Stop recording");
+    demoFlag.style.display = mode==="vision" ? "block" : "none";
+
+    if(mode==="vision"){
+      camFeed.srcObject = stream;
+      camFeed.style.display = "block";
+      waveCanvas.style.display = "none";
+      stageIdle.style.display = "none";
+    } else {
+      waveCanvas.style.display = "block";
+      camFeed.style.display = "none";
+      stageIdle.style.display = "none";
+    }
+
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    sourceNode = audioCtx.createMediaStreamSource(stream);
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 256;
+    sourceNode.connect(analyser);
+    if(mode==="audio") drawWave();
+
+    sessionStart = Date.now();
+    sessionTimer.style.display = "inline";
+    timerInterval = setInterval(function(){
+      sessionTimer.textContent = fmtTime(Math.floor((Date.now()-sessionStart)/1000));
+    }, 1000);
+
+    statusLine1.textContent = mode==="vision" ? "Scanning for a face…" : "Listening…";
+    statusLine2.textContent = "Recording started " + new Date().toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"});
+
+    if(mode==="vision"){
+      recognitionTimer = setTimeout(runFaceRecognition, 2400);
+    } else {
+      statusLine1.textContent = "Listening — voice only";
+    }
+
+    beginTranscriptStream();
+
+  }).catch(function(err){
+    toast(mode==="vision" ? "Camera or microphone access was blocked." : "Microphone access was blocked.");
+  });
+}
+
+function runFaceRecognition(){
+  if(!recording) return;
+  var forced = quickTagSelect.value;
+  var result;
+  if(forced){
+    result = state.people.find(function(p){ return p.id===forced; }) || null;
+  } else {
+    var roll = Math.random();
+    result = roll < 0.62 ? state.people[Math.floor(Math.random()*state.people.length)] : null;
+  }
+  var box = document.createElement("div");
+  box.className = "face-box" + (result ? "" : " unknown");
+  var w = 32 + Math.random()*6, h = 40 + Math.random()*6;
+  box.style.width = w+"%"; box.style.height = h+"%";
+  box.style.left = (34 + Math.random()*8)+"%"; box.style.top = (16 + Math.random()*6)+"%";
+  var tag = document.createElement("span");
+  tag.className = "tag";
+  if(result){
+    tag.textContent = result.name + " · " + result.relation;
+    recognizedPerson = result;
+    statusLine1.textContent = "Recognized: " + result.name;
+    statusLine2.textContent = result.relation + " · last seen " + result.lastSeen;
+  } else {
+    tag.textContent = "Unrecognized face";
+    pendingUnknownVision = true;
+    statusLine1.textContent = "No match found";
+    statusLine2.textContent = "We'll ask who this was once the call ends.";
+  }
+  box.appendChild(tag);
+  stageVisual.appendChild(box);
+}
+
+var TRANSCRIPT_POOLS = {
+  known: [
+    {speaker:"other", text:"Hi Amma, it's me — I brought you some of the payasam you like."},
+    {speaker:"host", text:"Oh wonderful, come in, come in. How was the drive?"},
+    {speaker:"other", text:"Not bad, traffic was light today. How's your knee been feeling?"},
+    {speaker:"host", text:"Much better actually, the exercises are helping."},
+    {speaker:"other", text:"Good. I wanted to tell you — we're planning to visit this weekend with the kids."},
+    {speaker:"host", text:"That would make me so happy. Tell them I'll make their favorite snacks."},
+    {speaker:"other", text:"They'll love that. Also, don't forget your evening tablets, okay?"},
+    {speaker:"host", text:"I won't, I promise. Sit, have some tea with me."}
+  ],
+  unknown: [
+    {speaker:"other", text:"Good afternoon — I don't think we've met. I'm from the flat next door."},
+    {speaker:"host", text:"Oh hello, nice to meet you. Please, come sit."},
+    {speaker:"other", text:"I just wanted to introduce myself and see if you needed anything from the market."},
+    {speaker:"host", text:"That's very kind of you. Maybe some milk, if it's not too much trouble."},
+    {speaker:"other", text:"Not at all, I'll drop it by this evening."},
+    {speaker:"host", text:"Thank you so much. What did you say your name was again?"},
+    {speaker:"other", text:"I'll write it down for you before I go, don't worry."}
+  ],
+  audio: [
+    {speaker:"other", text:"Hi, this is calling about the community health check-up next week."},
+    {speaker:"host", text:"Oh yes, I remember getting a note about that."},
+    {speaker:"other", text:"Good — we just need to confirm your appointment time on Thursday morning."},
+    {speaker:"host", text:"Thursday morning works fine for me."},
+    {speaker:"other", text:"Perfect, we'll see you then. Is there anything else you'd like us to know?"},
+    {speaker:"host", text:"No, I think that covers it. Thank you for calling."}
+  ]
+};
+
+function beginTranscriptStream(){
+  if(mode==="audio"){
+    currentTranscriptPool = TRANSCRIPT_POOLS.audio.slice();
+  } else {
+    currentTranscriptPool = (Math.random()<0.55 ? TRANSCRIPT_POOLS.known : TRANSCRIPT_POOLS.unknown).slice();
+  }
+  transcriptBody.innerHTML = "";
+  transcriptCursor = 0;
+  pushNextLine();
+}
+function pushNextLine(){
+  if(!recording || transcriptCursor >= currentTranscriptPool.length){
+    if(recording) transcriptTimer = setTimeout(pushNextLine, 3800);
+    return;
+  }
+  var line = currentTranscriptPool[transcriptCursor++];
+  transcriptLines.push(line);
+  var el = document.createElement("div");
+  el.className = "t-line " + line.speaker;
+  el.innerHTML = '<div class="who">' + (line.speaker==="host" ? "Host" : "Other speaker") + '</div><p></p>';
+  el.querySelector("p").textContent = line.text;
+  transcriptBody.appendChild(el);
+  transcriptBody.scrollTop = transcriptBody.scrollHeight;
+  transcriptTimer = setTimeout(pushNextLine, 2600 + Math.random()*1400);
+}
+
+function stopSession(){
+  recording = false;
+  recBtn.classList.remove("recording");
+  recBtn.setAttribute("aria-label","Start recording");
+  clearTimeout(recognitionTimer);
+  clearTimeout(transcriptTimer);
+  clearInterval(timerInterval);
+  cancelAnimationFrame(waveRAF);
+  sessionTimer.style.display = "none";
+  quickTagWrap.style.display = "none";
+
+  if(mediaStream){ mediaStream.getTracks().forEach(function(t){ t.stop(); }); mediaStream=null; }
+  if(audioCtx){ audioCtx.close(); audioCtx=null; }
+  camFeed.srcObject = null;
+  camFeed.style.display = "none";
+  waveCanvas.style.display = "none";
+  demoFlag.style.display = "none";
+  Array.prototype.slice.call(stageVisual.querySelectorAll(".face-box")).forEach(function(b){ b.remove(); });
+  stageIdle.style.display = "flex";
+  statusLine1.textContent = "Ready when you are";
+  statusLine2.textContent = "No one is being recorded right now.";
+
+  var durationSec = sessionStart ? Math.max(4, Math.floor((Date.now()-sessionStart)/1000)) : 12;
+  finalizeSession(durationSec);
+}
+
+recBtn.addEventListener("click", function(){
+  if(!recording) startSession(); else stopSession();
+});
+
+/* ---------------- finalize / summary / naming ---------------- */
+function computeDiarization(){
+  var hostChars=0, otherChars=0;
+  transcriptLines.forEach(function(l){
+    if(l.speaker==="host") hostChars += l.text.length; else otherChars += l.text.length;
+  });
+  var total = hostChars+otherChars || 1;
+  var hostPct = Math.round(hostChars/total*100);
+  return {hostPct: hostPct, otherPct: 100-hostPct};
+}
+
+var SUMMARY_TOPICS = [
+  "medication and how the knee has been feeling",
+  "an upcoming weekend visit with the grandchildren",
+  "the community health check-up appointment",
+  "the flowers and payasam brought over as a gift",
+  "plans for the Diwali travel",
+  "a quiet cup of tea and catching up on the week"
+];
+function generateSummary(person, pool){
+  var topic = SUMMARY_TOPICS[Math.floor(Math.random()*SUMMARY_TOPICS.length)];
+  var who = person ? person.name : (mode==="audio" ? "the caller" : "the visitor");
+  return who + " talked about " + topic + ". The conversation lasted a few minutes and felt warm and unhurried.";
+}
+
+var lastSessionMeta = null;
+
+function finalizeSession(durationSec){
+  var diar = computeDiarization();
+  var summaryText = generateSummary(recognizedPerson, currentTranscriptPool);
+  var isUnnamed = (mode==="audio" && !recognizedPerson) || (mode==="vision" && pendingUnknownVision && !recognizedPerson);
+
+  lastSessionMeta = {
+    id: "s"+Date.now(),
+    date: new Date(),
+    durationSec: durationSec,
+    mode: mode,
+    personId: recognizedPerson ? recognizedPerson.id : null,
+    personName: recognizedPerson ? recognizedPerson.name : null,
+    summary: summaryText,
+    transcript: transcriptLines.slice(),
+    diar: diar
+  };
+
+  if(recognizedPerson){
+    recognizedPerson.lastSummary = summaryText;
+    if(!recognizedPerson.firstSummary) recognizedPerson.firstSummary = summaryText;
+    recognizedPerson.lastSeen = lastSessionMeta.date.toLocaleDateString([], {month:"short", day:"numeric", year:"numeric"});
+    recognizedPerson.sessions = (recognizedPerson.sessions||0)+1;
+  }
+
+  state.sessions.unshift(lastSessionMeta);
+  saveState();
+  renderSummaryCard(lastSessionMeta, isUnnamed);
+  populateQuickTag();
+  updateMetaCounts();
+
+  if(isUnnamed){
+    setTimeout(function(){ openNameModal(); }, 550);
+  }
+}
+
+function renderSummaryCard(meta, isUnnamed){
+  var diar = meta.diar;
+  var html = ''
+    + '<div class="summary-card">'
+    + '  <div class="kicker">Session summary · ' + meta.date.toLocaleDateString([], {month:"short", day:"numeric"}) + ' at ' + meta.date.toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"}) + '</div>'
+    + '  <h3>' + (meta.personName ? esc(meta.personName) : (isUnnamed ? "Unrecognized speaker" : "Session recorded")) + '</h3>'
+    + '  <p class="body">' + esc(meta.summary) + '</p>'
+    + '  <div class="summary-meta">'
+    + '    <div><div class="k">Duration</div><div class="v">' + fmtTime(meta.durationSec) + '</div></div>'
+    + '    <div><div class="k">Mode</div><div class="v">' + (meta.mode==="vision" ? "Vision + voice" : "Voice only") + '</div></div>'
+    + '    <div><div class="k">Diarization</div><div class="v">Host ' + diar.hostPct + '% · Other ' + diar.otherPct + '%</div></div>'
+    + '  </div>'
+    + '  <div class="diar-bar" style="max-width:320px;"><span class="host" style="width:' + diar.hostPct + '%"></span><span class="other" style="width:' + diar.otherPct + '%"></span></div>'
+    + '  <div class="summary-actions" style="margin-top:20px;">'
+    + (isUnnamed ? '<button class="btn accent" id="nameNowBtn" type="button">Name this person</button>' : '<button class="btn" id="viewPersonBtn" type="button">View in People</button>')
+    + '    <button class="btn ghost" data-nav="history">See full history →</button>'
+    + '  </div>'
+    + '</div>';
+  summaryWrap.innerHTML = html;
+  summaryWrap.style.display = "block";
+  var nameNowBtn = $("nameNowBtn");
+  if(nameNowBtn) nameNowBtn.addEventListener("click", openNameModal);
+  var viewPersonBtn = $("viewPersonBtn");
+  if(viewPersonBtn) viewPersonBtn.addEventListener("click", function(){ setView("people"); if(meta.personId) setTimeout(function(){ openDetail(meta.personId); }, 150); });
+  var historyLink = summaryWrap.querySelector('[data-nav="history"]');
+  if(historyLink) historyLink.addEventListener("click", function(){ setView("history"); });
+  summaryWrap.scrollIntoView({behavior:"smooth", block:"nearest"});
+}
+
+function esc(s){ var d=document.createElement("div"); d.textContent=s; return d.innerHTML; }
+
+/* ---------------- naming modal ---------------- */
+function openNameModal(){
+  nameInput.value = ""; relInput.value = "";
+  nameField.classList.remove("invalid");
+  nameDesc.textContent = mode==="audio"
+    ? "The call's saved. Since there was no camera, add a name so PersonaLens can recognize their voice next time."
+    : "The conversation's saved. Add a name now so PersonaLens recognizes them next time.";
+  nameOverlay.classList.add("open");
+  setTimeout(function(){ nameInput.focus(); }, 60);
+}
+function closeNameModal(){ nameOverlay.classList.remove("open"); }
+nameLaterBtn.addEventListener("click", closeNameModal);
+nameOverlay.addEventListener("click", function(e){ if(e.target===nameOverlay) closeNameModal(); });
+nameSaveBtn.addEventListener("click", function(){
+  var val = nameInput.value.trim();
+  if(!val){ nameField.classList.add("invalid"); nameInput.focus(); return; }
+  nameField.classList.remove("invalid");
+  var newPerson = {
+    id: "p"+Date.now(),
+    name: val,
+    relation: relInput.value || "Not specified",
+    firstSummary: lastSessionMeta ? lastSessionMeta.summary : "",
+    lastSummary: lastSessionMeta ? lastSessionMeta.summary : "",
+    lastSeen: new Date().toLocaleDateString([], {month:"short", day:"numeric", year:"numeric"}),
+    sessions: 1,
+    vision: mode==="vision"
+  };
+  state.people.push(newPerson);
+  if(lastSessionMeta){
+    lastSessionMeta.personId = newPerson.id;
+    lastSessionMeta.personName = newPerson.name;
+  }
+  saveState();
+  populateQuickTag();
+  updateMetaCounts();
+  closeNameModal();
+  toast("Saved " + newPerson.name + " to People");
+  renderSummaryCard(lastSessionMeta, false);
+});
+nameInput.addEventListener("input", function(){ nameField.classList.remove("invalid"); });
+
+/* ---------------- people view ---------------- */
+function updateMetaCounts(){
+  peopleCountMeta.textContent = state.people.length + " known people · " + state.sessions.length + " session" + (state.sessions.length===1?"":"s") + " logged";
+}
+function renderPeople(){
+  detailPanel.classList.remove("open");
+  if(state.people.length===0){
+    peopleList.innerHTML = '<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg><p>No one logged yet. Start a session from the dashboard.</p></div>';
+    return;
+  }
+  var sorted = state.people.slice().sort(function(a,b){ return (b.sessions||0)-(a.sessions||0); });
+  peopleList.innerHTML = sorted.map(function(p){
+    return '<div class="person-row" data-id="'+p.id+'" tabindex="0" role="button">'
+      + '<div class="avatar">'+esc(initials(p.name))+'</div>'
+      + '<div><div class="p-name">'+esc(p.name)+'<small>'+esc(p.relation)+' · '+(p.sessions||0)+' session'+(p.sessions===1?"":"s")+'</small></div></div>'
+      + '<div class="p-sub col-first"><span class="k">First met</span>'+esc(truncate(p.firstSummary,86))+'</div>'
+      + '<div class="p-sub col-first"><span class="k">Most recent</span>'+esc(truncate(p.lastSummary,86))+'</div>'
+      + '<div class="p-seen col-seen">'+esc(p.lastSeen||"—")+'</div>'
+      + '</div>';
+  }).join("");
+  Array.prototype.slice.call(peopleList.querySelectorAll(".person-row")).forEach(function(row){
+    row.addEventListener("click", function(){ openDetail(row.getAttribute("data-id")); });
+    row.addEventListener("keypress", function(e){ if(e.key==="Enter") openDetail(row.getAttribute("data-id")); });
+  });
+}
+function initials(name){
+  return name.split(" ").filter(Boolean).slice(0,2).map(function(w){ return w[0]; }).join("").toUpperCase();
+}
+function truncate(s,n){ s=s||"—"; return s.length>n ? s.slice(0,n-1)+"…" : s; }
+
+function openDetail(id){
+  var p = state.people.find(function(x){ return x.id===id; });
+  if(!p) return;
+  detailPanel.innerHTML = ''
+    + '<h3>'+esc(p.name)+'</h3>'
+    + '<div class="rel">'+esc(p.relation)+' · '+(p.sessions||0)+' session'+(p.sessions===1?"":"s")+' · last seen '+esc(p.lastSeen||"—")+'</div>'
+    + '<div class="detail-grid">'
+    + '  <div><div class="k">First interaction (permanent)</div><p>'+esc(p.firstSummary||"No summary yet.")+'</p></div>'
+    + '  <div><div class="k">Most recent interaction</div><p>'+esc(p.lastSummary||"No summary yet.")+'</p></div>'
+    + '</div>';
+  detailPanel.classList.add("open");
+  detailPanel.scrollIntoView({behavior:"smooth", block:"nearest"});
+}
+
+/* ---------------- history view ---------------- */
+function renderHistory(){
+  if(state.sessions.length===0){
+    historyList.innerHTML = '<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg><p>No sessions recorded yet. Sessions you start from the dashboard will show up here.</p></div>';
+    return;
+  }
+  historyList.innerHTML = state.sessions.map(function(s){
+    var d = new Date(s.date);
+    return '<div class="hist-row">'
+      + '<div class="hist-date">'+d.toLocaleDateString([], {month:"short", day:"numeric"})+'<br>'+d.toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"})+'</div>'
+      + '<div class="hist-main"><div class="who">'+(esc(s.personName)||'<em style="color:var(--muted); font-style:normal;">Unnamed</em>')+' <span class="tag-chip on-'+(s.mode==="vision"?"vision":"audio")+'" style="margin-left:8px;">'+(s.mode==="vision"?"Vision":"Voice only")+'</span></div>'
+      + '<div class="snippet">'+esc(truncate(s.summary,140))+'</div></div>'
+      + '<div class="hist-split"><span class="pct">Host '+s.diar.hostPct+'% · Other '+s.diar.otherPct+'%</span><div class="diar-bar"><span class="host" style="width:'+s.diar.hostPct+'%"></span><span class="other" style="width:'+s.diar.otherPct+'%"></span></div></div>'
+      + '</div>';
+  }).join("");
+}
+
+/* ---------------- voice enrollment ---------------- */
+var enrollStream=null, enrollAudioCtx=null, enrollAnalyser=null, enrollSource=null, enrollRAF=null;
+var enrollRecorder=null, enrollChunks=[], enrollTimerInterval=null, enrollSeconds=0, enrollRecording=false, enrollHasSample=false;
+
+function refreshEnrollStatus(){
+  if(state.enrolled){
+    enrollDot.style.background = "var(--teal)";
+    enrollStatusText.textContent = "Voice profile enrolled";
+  } else {
+    enrollDot.style.background = "var(--gold)";
+    enrollStatusText.textContent = "Enroll host voice";
+  }
+}
+enrollStatusBtn.addEventListener("click", function(){ openEnrollModal(); });
+
+function openEnrollModal(){
+  enrollOverlay.classList.add("open");
+  enrollHasSample = state.enrolled;
+  enrollSaveBtn.disabled = !enrollHasSample;
+  enrollStatus.textContent = state.enrolled ? "A voice profile is already saved. Recording again will replace it." : "";
+  enrollStatus.className = "enroll-status";
+  enrollTimer.textContent = "Aim for 5–8 seconds";
+  drawEnrollIdle();
+}
+function closeEnrollModal(){
+  enrollOverlay.classList.remove("open");
+  stopEnrollRecording(true);
+}
+enrollSkipBtn.addEventListener("click", closeEnrollModal);
+enrollOverlay.addEventListener("click", function(e){ if(e.target===enrollOverlay) closeEnrollModal(); });
+
+function drawEnrollIdle(){
+  var ctx = enrollCanvas.getContext("2d");
+  var rect = enrollCanvas.getBoundingClientRect();
+  var dpr = window.devicePixelRatio||1;
+  enrollCanvas.width = rect.width*dpr; enrollCanvas.height = rect.height*dpr;
+  ctx.clearRect(0,0,enrollCanvas.width, enrollCanvas.height);
+}
+
+enrollRecBtn.addEventListener("click", function(){
+  if(enrollRecording){ stopEnrollRecording(false); }
+  else { startEnrollRecording(); }
+});
+
+function startEnrollRecording(){
+  navigator.mediaDevices.getUserMedia({audio:true}).then(function(stream){
+    enrollStream = stream;
+    enrollRecording = true;
+    enrollRecBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="7" y="7" width="10" height="10" rx="2"/></svg> Stop';
+    enrollStatus.textContent = "Recording… read a sentence naturally.";
+    enrollStatus.className = "enroll-status";
+
+    enrollAudioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    enrollSource = enrollAudioCtx.createMediaStreamSource(stream);
+    enrollAnalyser = enrollAudioCtx.createAnalyser();
+    enrollAnalyser.fftSize = 256;
+    enrollSource.connect(enrollAnalyser);
+    animateEnrollWave();
+
+    try{
+      enrollChunks = [];
+      enrollRecorder = new MediaRecorder(stream);
+      enrollRecorder.ondataavailable = function(e){ if(e.data.size>0) enrollChunks.push(e.data); };
+      enrollRecorder.start();
+    }catch(e){}
+
+    enrollSeconds = 0;
+    enrollTimer.textContent = "0.0s";
+    enrollTimerInterval = setInterval(function(){
+      enrollSeconds += 0.1;
+      enrollTimer.textContent = enrollSeconds.toFixed(1)+"s";
+    }, 100);
+  }).catch(function(){
+    toast("Microphone access was blocked.");
+  });
+}
+function animateEnrollWave(){
+  var ctx = enrollCanvas.getContext("2d");
+  var bufferLength = enrollAnalyser.frequencyBinCount;
+  var data = new Uint8Array(bufferLength);
+  function loop(){
+    enrollRAF = requestAnimationFrame(loop);
+    enrollAnalyser.getByteFrequencyData(data);
+    var w = enrollCanvas.width, h = enrollCanvas.height;
+    ctx.clearRect(0,0,w,h);
+    var bars = 40, step = Math.floor(bufferLength/bars);
+    var barW = w/bars*0.6, gap = w/bars*0.4;
+    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--gold").trim() || "#9A6C1E";
+    for(var i=0;i<bars;i++){
+      var v = data[i*step]/255;
+      var barH = Math.max(h*0.04, v*h*0.8);
+      var x = i*(barW+gap)+gap/2, y=(h-barH)/2;
+      ctx.globalAlpha = 0.4+v*0.6;
+      roundRect(ctx,x,y,barW,barH,Math.min(3, barW/2));
+    }
+    ctx.globalAlpha=1;
+  }
+  loop();
+}
+function stopEnrollRecording(silent){
+  if(!enrollRecording){
+    if(enrollStream){ enrollStream.getTracks().forEach(function(t){t.stop();}); enrollStream=null; }
+    return;
+  }
+  enrollRecording = false;
+  clearInterval(enrollTimerInterval);
+  cancelAnimationFrame(enrollRAF);
+  enrollRecBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="6"/></svg> Record sample';
+  if(enrollRecorder && enrollRecorder.state!=="inactive"){ try{ enrollRecorder.stop(); }catch(e){} }
+  if(enrollStream){ enrollStream.getTracks().forEach(function(t){t.stop();}); enrollStream=null; }
+  if(enrollAudioCtx){ enrollAudioCtx.close(); enrollAudioCtx=null; }
+  if(!silent){
+    if(enrollSeconds < 2){
+      enrollStatus.textContent = "That was a bit short — try recording at least 3 seconds.";
+      enrollStatus.className = "enroll-status";
+      enrollHasSample = false;
+      enrollSaveBtn.disabled = true;
+    } else {
+      enrollStatus.textContent = "Sample captured (" + enrollSeconds.toFixed(1) + "s). Ready to save.";
+      enrollStatus.className = "enroll-status ok";
+      enrollHasSample = true;
+      enrollSaveBtn.disabled = false;
+    }
+  }
+}
+enrollSaveBtn.addEventListener("click", function(){
+  if(!enrollHasSample) return;
+  state.enrolled = true;
+  state.enrolledAt = new Date().toISOString();
+  saveState();
+  refreshEnrollStatus();
+  closeEnrollModal();
+  toast("Voice profile saved — diarization is ready");
+});
+
+/* ---------------- boot ---------------- */
+function boot(){
+  updateMetaCounts();
+  populateQuickTag();
+  refreshEnrollStatus();
+  setMode("vision");
+  if(!state.enrolled){
+    setTimeout(function(){ openEnrollModal(); }, 500);
+  }
+  window.addEventListener("keydown", function(e){
+    if(e.key==="Escape"){
+      if(nameOverlay.classList.contains("open")) closeNameModal();
+      else if(enrollOverlay.classList.contains("open") && state.enrolled) closeEnrollModal();
+    }
+  });
+}
+boot();
+
+})();
+</script>
+</body>
+</html>
